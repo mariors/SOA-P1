@@ -23,20 +23,22 @@ int* tickets;
 int* ticket_sum;
 int* thread_status;
 int* workload;
+int* workit;
+volatile int current_pid;
 
 //Series calculation.
 long double* temp_acc;
 long double* thread_acc;
 // jmp_buf** bufs;
-jmp_buf bufs[5];
-jmp_buf sched;
+sigjmp_buf bufs[5];
+sigjmp_buf sched;
 
 int select_ticket(int);
 void calculate_ticket_sum();
 void remove_tickets(int);
 int choose_winner();
 long double run_work_unit(int,int);
-void run_thread(volatile int pid);
+void run_thread();
 
 void initialize_global(struct Property* property) {
     num_threads = property->size;
@@ -48,6 +50,7 @@ void initialize_global(struct Property* property) {
     thread_status = malloc(sizeof(int)*num_threads);
     temp_acc = malloc(sizeof(long double)*num_threads);
     thread_acc = malloc(sizeof(long double)*num_threads);
+    workit = malloc(sizeof(int)*num_threads);
     // bufs = malloc(sizeof(jmp_buf)*num_threads);
     workload = property->workload;
     for (int i = 0; i < num_threads; ++i) {
@@ -57,6 +60,7 @@ void initialize_global(struct Property* property) {
         thread_status[i]=NOT_STARTED;
         temp_acc[i] = 0.0;
         thread_acc[i] = 0.0;
+        workit[i] = 1;
         // bufs[i] = malloc(sizeof(jmp_buf));
         // bufs[i] = &aux;
     }
@@ -93,46 +97,51 @@ void remove_tickets(int pid){
 int choose_winner(){
     int winner = select_ticket(num_tickets);
     for(int i=0;i<num_threads;i++){
-        if(ticket_sum[i] > winner)
-            return i;
-    }
+            if(ticket_sum[i] > winner){
+                printf("Winner! %d\n",i);
+                return i;
+            }
+        }
+    
     return -1;
 }
 
 long double calculate_series_element(int iter) {return 1.0;}
 
-void run_thread(volatile int pid) {
-    printf("Running %d quantum %d\n",pid,quantum);
+void run_thread() {
+    printf("Running %d quantum %d\n",current_pid,quantum);
     int r;
-    // int r = setjmp(bufs[pid]);
-    int total_iterations = workload[pid] * MIN_WORKLOAD;
-    int yield_rate = (quantum*total_iterations/100.0);
+    // int r = sigsetjmp(bufs[current_pid],1);
     // printf("Yield rate: %d on quantum %d\n",yield_rate,quantum);
-    // printf("Running %d\n",pid);
-    for (int workit = 1; workit < total_iterations+1; ++workit) {
-        // printf("Starting iteration %d\n",pid);
-        // printf("inside loop %d\n",pid);
-        thread_acc[pid] += arctan_aproximation(1,workit);
-        // printf("(Mode %d)PID %d it %d: %Lf\n",expropriative_mode,pid,workit,thread_acc[pid]);
-        // printf("Calculated one step %d\n",pid);
-        // temp_acc[pid] = 0.0;
-        if(workit >0 && workit % yield_rate == 0 && workit%MIN_WORKLOAD==0 && expropriative_mode==MODE_NO_EXPROPIATIVO){
-            printf("enough steps to yield, setting jmp %d\n",pid);
-            r = setjmp(bufs[pid]);
-            if(r==0) longjmp(sched,SUSPENDED); 
-            else continue;
+    // printf("Running %d\n",current_pid);
+    for (; workit[current_pid] < (workload[current_pid] * MIN_WORKLOAD); ++workit[current_pid]) {
+        // printf("Starting iteration %d\n",current_pid);
+        // printf("inside loop %d\n",current_pid);
+        thread_acc[current_pid] += arctan_aproximation(1,workit[current_pid]);
+        // printf("(Mode %d)PID %d it %d/%d: %Lf\n",expropriative_mode,current_pid,workit[current_pid],(workload[current_pid] * MIN_WORKLOAD)+1,thread_acc[current_pid]);
+        // printf("Calculated one step %d\n",current_pid);
+        // temp_acc[current_pid] = 0.0;
+        if(workit[current_pid] >0 && workit[current_pid] % (int)(quantum*((workload[current_pid] * MIN_WORKLOAD)+1)/100.0) == 0 && workit[current_pid]%MIN_WORKLOAD==0 && expropriative_mode==MODE_NO_EXPROPIATIVO){
+             printf("PID %d yielding\n",current_pid);
+            r = sigsetjmp(bufs[current_pid],1);
+            if(r==0) siglongjmp(sched,SUSPENDED);
+            else {printf("PID %d came back from scheduler\n",current_pid);
+        }
         }
     }
     // printf("Thread %d done \n",pid);
     // printf("Final value of thread %d: %Lf\n",pid,thread_acc[pid]);
-    // r = setjmp(bufs[pid]);
+    // r = sigsetjmp(bufs[pid],1);
 
-    longjmp(sched,DONE);
+    siglongjmp(sched,DONE);
 }
 
 int threads_done() {
     for (int i = 0; i < num_threads; ++i){
-        if(thread_status[i]!=DONE) return 0;
+        if(thread_status[i]!=DONE) {
+            printf("Thread %d not done\n",i);
+            return 0;
+        }
     }
     return 1;
 }
@@ -141,18 +150,20 @@ void call_thread(int pid) {
     printf("Calling to run: %d\n",pid);
     if(thread_status[pid] == NOT_STARTED){
         thread_status[pid] = RUNNING;
-        printf("Thread %d not started, calling func!\n",pid);
+        // printf("Thread %d not started, calling func!\n",pid);
 
         //ASsign workload to thread
-        run_thread(pid);
+        current_pid = pid;
+        run_thread();
     } else {
         if(thread_status[pid] != DONE) {
             printf("Resuming: %d\n",pid);
             thread_status[pid] = RUNNING;
-            printf("Calling lonjmp resume %d\n",pid);
-            longjmp(bufs[pid],RUNNING);
+            printf("Calling signlongjmp resume pid %d\n",pid);
+            current_pid = pid;
+            siglongjmp(bufs[pid],RUNNING);
         } else {
-            printf("Thread %d already done \n",pid);
+            // printf("Thread %d already done \n",pid);
         }
     }
 }
@@ -162,12 +173,13 @@ void run_non_expropriative(){
     int r;
     int latest = choose_winner();
     while(!threads_done()){
+        printf("Scheduling loop\n");
         int to_run = choose_winner();
-        if(to_run == latest)continue;
-        r = setjmp(sched);
+        // if(to_run == latest)continue;
+        r = sigsetjmp(sched,1);
         if(r==0) call_thread(to_run);
         else {//Returning from thread.
-            printf("Returning from thread %d with status %d\n",to_run,r);
+            // printf("Returning from thread %d with status %d\n",to_run,r);
             thread_status[to_run] = r;
             latest = to_run;
             if(thread_status[to_run] == DONE){
@@ -208,7 +220,7 @@ void run_expropriative(){
 
 /*
 void do_timeout(){
-     longjmp(sched,TIMEOUT);
+     siglongjmp(sched,TIMEOUT);
 }*/
 
 int main(int argc, char** argv){
