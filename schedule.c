@@ -15,6 +15,7 @@
 int num_tickets;
 
 int num_threads;
+int quantum;
 int* cant;
 int* tickets;
 int* ticket_sum;
@@ -38,6 +39,7 @@ void initialize_global(struct Property* property) {
     num_threads = property->size;
     cant = malloc(sizeof(int)*num_threads);
     tickets = property->tickets;
+    quantum = property->quantum;
     ticket_sum = malloc(sizeof(int)*num_threads);
     thread_status = malloc(sizeof(int)*num_threads);
     temp_acc = malloc(sizeof(long double)*num_threads);
@@ -94,16 +96,22 @@ long double run_work_unit(int pid,int start) {
     }
     return temp_acc[pid];
 }
+//Workloads:[]
+//[1 1 1 1 2 2 2 3 3]
 
 void run_thread(int pid) {
     int r;
-    int start = pid*MIN_WORKLOAD;
-    for (int offset = start; offset < start + (workload[pid] * MIN_WORKLOAD); offset += MIN_WORKLOAD) {
+    int total_iterations = workload[pid] * MIN_WORKLOAD;
+    int yield_rate = (quantum*total_iterations/100.0);
+    for (int workit = 0; workit < total_iterations; workit+=MIN_WORKLOAD) {
         r = setjmp(*bufs[pid]);
-        thread_acc[pid] += run_work_unit(pid,offset);
+        thread_acc[pid] += run_work_unit(pid,workit);
         temp_acc[pid] = 0.0;
-        longjmp(sched,SUSPENDED);//sometimes
+        if(workit % yield_rate == 0){
+            longjmp(sched,SUSPENDED);   
+        }
     }
+    longjmp(sched,DONE);
 }
 
 int threads_done() {
