@@ -1,7 +1,7 @@
 CC = gcc
 GTKFLAGS = `pkg-config  --libs --cflags gtk+-2.0`
 LDFLAGS = -lm
-SRCS = gtk_ui.c hashmap.c test_main.c
+SRCS = gtk_ui.c hashmap.c test_main.c arctan_func.c
 MAIN = test_main_out
 
 all:	$(MAIN)

@@ -1,12 +1,12 @@
-#include "loader.h"
-#include "gtk_ui.h"
 #include <stdio.h>
 #include <math.h>
 
+#include "loader.h"
+#include "schedule.c"
+
+
 //Se usa por la interfaz, no borrar
 char **ids;
-
-
 
 void * inc_x (void *x_void_ptr) {
 
@@ -67,20 +67,20 @@ void * inc_x (void *x_void_ptr) {
 
 
 void expropiativo(struct Property *property){
-
 	pthread_t inc_x_thread;
 	int t = 1;
 	pthread_create (&inc_x_thread, NULL, inc_x, &t);
-
 }
 
 void no_expropiativo(struct Property *property){
-
+	printf("Init non expropiative");
+	initialize_global(property);
+	printf("run it");
 	pthread_t inc_x_thread;
 	int t = 1;
-	pthread_create (&inc_x_thread, NULL, inc_x, &t);
-
+	pthread_create (&inc_x_thread, NULL, run_non_expropriative, &t);
 }
+
 
 
 int main(int argc, char * argv[]){
@@ -120,10 +120,11 @@ int main(int argc, char * argv[]){
 		no_expropiativo(&property);
 	}
 
-
 	gtk_main();
 
 	gdk_threads_leave ();
+
+	sleep(10);
 
 	return 0;
 }

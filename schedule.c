@@ -3,6 +3,8 @@
 #include <time.h>
 #include <math.h>
 #include <setjmp.h>
+
+#include "gtk_ui.h"
 #include "loader.h"
 #include "arctan_func.h"
 
@@ -18,17 +20,17 @@ int num_tickets;
 int num_threads;
 int quantum;
 int expropriative_mode;
-int* cant;
-int* tickets;
-int* ticket_sum;
-int* thread_status;
-int* workload;
+int cant[MAX_THREADS];
+int tickets[MAX_THREADS];
+int ticket_sum[MAX_THREADS];
+int thread_status[MAX_THREADS];
+int workload[MAX_THREADS];
 
 //Series calculation.
-long double* temp_acc;
-long double* thread_acc;
+long double temp_acc[MAX_THREADS];
+long double thread_acc[MAX_THREADS];
 // jmp_buf** bufs;
-jmp_buf bufs[5];
+jmp_buf bufs[MAX_THREADS];
 jmp_buf sched;
 
 int select_ticket(int);
@@ -40,16 +42,9 @@ void run_thread(volatile int pid);
 
 void initialize_global(struct Property* property) {
     num_threads = property->size;
-    cant = malloc(sizeof(int)*num_threads);
-    tickets = property->tickets;
-    quantum = property->quantum;
     expropriative_mode = property->mode;
-    ticket_sum = malloc(sizeof(int)*num_threads);
-    thread_status = malloc(sizeof(int)*num_threads);
-    temp_acc = malloc(sizeof(long double)*num_threads);
-    thread_acc = malloc(sizeof(long double)*num_threads);
     // bufs = malloc(sizeof(jmp_buf)*num_threads);
-    workload = property->workload;
+    quantum = property->quantum;
     for (int i = 0; i < num_threads; ++i) {
         jmp_buf aux;
         cant[i]=0;
@@ -57,6 +52,12 @@ void initialize_global(struct Property* property) {
         thread_status[i]=NOT_STARTED;
         temp_acc[i] = 0.0;
         thread_acc[i] = 0.0;
+
+        tickets[i] = property->tickets[i];
+        workload[i] = property->workload[i];
+    
+
+
         // bufs[i] = malloc(sizeof(jmp_buf));
         // bufs[i] = &aux;
     }
@@ -106,17 +107,26 @@ void run_thread(volatile int pid) {
         //printf("PID %d it %d: %Lf\n",pid,workit,thread_acc[pid]);
         // printf("Calculated one step %d\n",pid);
         // temp_acc[pid] = 0.0;
-        if(workit >0 && workit % yield_rate == 0 && workit%MIN_WORKLOAD==0 && !expropriative_mode){
+        update_row_status(pid, 1.0 * workit/total_iterations,thread_acc[pid],1,0);
+        if(workit >0 && workit % yield_rate == 0 && workit%MIN_WORKLOAD==0 && expropriative_mode == 0) {
             // printf("enough steps to yield\n");
-            r = setjmp(bufs[pid]);
-            if(r==0) longjmp(sched,SUSPENDED); 
-            else continue;
+            update_row_status(pid,1.0 * workit/total_iterations,thread_acc[pid],0,0);
+            r = sigsetjmp(bufs[pid],1);
+            if(r==0) { 
+                siglongjmp(sched,SUSPENDED);
+            }
+            else {
+                printf("came back!");            
+                continue;
+            }
         }
     }
     // printf("Thread %d done \n",pid);
     // printf("Final value of thread %d: %Lf\n",pid,thread_acc[pid]);
-    // r = setjmp(bufs[pid]);
-    longjmp(sched,DONE);
+    // r = sigsetjmp(bufs[pid]);
+
+    update_row_status(pid,1,thread_acc[pid],0,1);
+    siglongjmp(sched,DONE);
 }
 
 int threads_done() {
@@ -131,15 +141,21 @@ void call_thread(int pid) {
     if(thread_status[pid] == NOT_STARTED){
         thread_status[pid] = RUNNING;
         printf("Thread %d not started, calling func!\n",pid);
-
-        //ASsign workload to thread
+        //Assign workload to thread
         run_thread(pid);
     } else {
         if(thread_status[pid] != DONE) {
             printf("Resuming: %d\n",pid);
             thread_status[pid] = RUNNING;
             printf("Calling lonjmp resume\n");
-            longjmp(bufs[pid],RUNNING);
+            int r = sigsetjmp(sched,1);
+            if(r == 0) siglongjmp(bufs[pid],RUNNING);
+            else{
+                thread_status[pid] = r;
+                if(thread_status[pid] == DONE){
+                    remove_tickets(pid); 
+                }
+            }
         } else {
             printf("Thread %d already done \n",pid);
         }
@@ -147,11 +163,12 @@ void call_thread(int pid) {
 }
 
 
-void run_non_expropriative(){
+void * run_non_expropriative(){
     int r;
+    printf("enter");
     while(!threads_done()){
         int to_run = choose_winner();
-        r = setjmp(sched);
+        r = sigsetjmp(sched,1);
         if(r==0) call_thread(to_run);
         else {//Returning from thread.
             thread_status[to_run] = r;
@@ -172,7 +189,7 @@ void run_expropriative(){
     int r;
     while(!threads_done()){
         int to_run = choose_winner();
-        r = setjmp(sched);
+        r = sigsetjmp(sched,1);
         if(r==0) call_thread(to_run);
         else {//Returning from thread.
             if(r==TIMEOUT){ //triggered by timeout func.
@@ -189,19 +206,8 @@ void run_expropriative(){
 
 
 // void do_timeout(){
-//     longjmp(sched,TIMEOUT);
+//     siglongjmp(sched,TIMEOUT);
 // }
-
-int main(int argc, char** argv){
-    //Initialize running environment.
-    struct Property property;
-    initProperty(&property);
-    initialize_global(&property);
-
-    run_non_expropriative();
-    return 0;
-}
-
 
 
 long double calculate_arctan(struct Property* property) {
