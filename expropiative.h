@@ -10,28 +10,25 @@
 #ifndef EXPROPIATIVE_H
 #define EXPROPIATIVE_H
 
-static struct ExpropiativoScheduler scheduler;
+
+// Registar buffers de los threads
+static struct ExpropiativeScheduler scheduler;
 struct Property *global_property;
 
-
-void do_expropiative(struct ExpropiativoScheduler *scheduler){
+//quantum
+void do_expropiative(struct ExpropiativeScheduler *scheduler){
+    //longjmp(sched,TIMEOUT);
 	// sacar thread
-	int newThread = choose_winner(scheduler);
+    // check if current thread DONE y remove_ticket
+    // change state to SUSPENDED
+	//int newThread = choose_winner(scheduler); // escoje el nuevo Thread
 	//send to Run
-	printf("do_expropiative thread: %d\n",newThread);
+	//printf("do_expropiative thread: %d\n",newThread);
 }
 
 
 void timer_handler (int signum){
-	static int count = 0;
-	static int lock = 0;
-	if(lock==0){
-		lock++;
-		initExpropiativoScheduler(&scheduler,global_property);
-	}else{
-		do_expropiative(&scheduler);
-		//printf ("timer expired %d times\n", ++count);
-	}
+	do_expropiative(&scheduler);
 }
 
 void create_signal_timer(int milliseconds){
@@ -60,6 +57,7 @@ void keep_working(){
 
 void run_expropiative(struct Property *property){
 	global_property = property;
+    initExpropiativeScheduler(&scheduler,global_property);
     create_signal_timer(property->quantum);
     keep_working();
 }
