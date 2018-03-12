@@ -2,7 +2,7 @@
 //#include "schedule.c"
 #include "expropiative.h"
 
-
+/*
 int main() 
 {
 	printf("Running expropiative\n");
@@ -14,4 +14,4 @@ int main()
 	run_expropriative(&property);
  	// keep_working();
     return 0;
-}
+}*/

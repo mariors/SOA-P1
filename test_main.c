@@ -2,6 +2,7 @@
 #include "gtk_ui.h"
 #include <stdio.h>
 #include <math.h>
+#include "expropiative.h"
 
 //Se usa por la interfaz, no borrar
 char **ids;
@@ -76,9 +77,11 @@ void expropiativo(struct Property *property){
 
 void no_expropiativo(struct Property *property){
 
+	initialize_global(property);
+
 	pthread_t inc_x_thread;
 	int t = 1;
-	pthread_create (&inc_x_thread, NULL, inc_x, &t);
+	pthread_create (&inc_x_thread, NULL, run_non_expropriative, &t);
 
 }
 

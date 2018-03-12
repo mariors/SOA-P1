@@ -1,10 +1,12 @@
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #include <math.h>
 #include <setjmp.h>
 #include "loader.h"
-#include "arctan_func.h"
+//#include "arctan_func.h"
 
 #define MAX_THREADS 100
 #define NOT_STARTED 0
@@ -12,6 +14,12 @@
 #define SUSPENDED 2
 #define DONE 3
 #define TIMEOUT 4
+
+int L = 100;
+
+long double arctan_aproximation(int x, int iter){
+    return 2 * (4*L * (x/ (pow(2*iter-1,2)*pow(x,2)+(4*pow(L,2)))));
+}
 
 int num_tickets;
 
@@ -114,21 +122,33 @@ void run_thread() {
     int r;
     // int r = sigsetjmp(bufs[current_pid],1);
     // printf("Yield rate: %d on quantum %d\n",yield_rate,quantum);
-    // printf("Running %d\n",current_pid);
+    printf("Running %d\n",current_pid);
     for (; workit[current_pid] < (workload[current_pid] * MIN_WORKLOAD); ++workit[current_pid]) {
         // printf("Starting iteration %d\n",current_pid);
-        // printf("inside loop %d\n",current_pid);
+        printf("inside loop %d\n",current_pid);
+
+        printf("%d\n",workit[current_pid]);
         thread_acc[current_pid] += arctan_aproximation(1,workit[current_pid]);
         // printf("(Mode %d)PID %d it %d/%d: %Lf\n",expropriative_mode,current_pid,workit[current_pid],(workload[current_pid] * MIN_WORKLOAD)+1,thread_acc[current_pid]);
-        // printf("Calculated one step %d\n",current_pid);
+        printf("Calculated one step %d\n",current_pid);
         // temp_acc[current_pid] = 0.0;
+        //update_row_status(current_pid,1.0 * workit[current_pid]/(workload[current_pid] * MIN_WORKLOAD),thread_acc[current_pid],1,0); 
+        
+        printf("%d %d %d %d %d %d\n",
+            quantum,
+            current_pid, 
+            workload[current_pid],
+            (workload[current_pid] * MIN_WORKLOAD)
+            ,(quantum*((workload[current_pid] * MIN_WORKLOAD)+1)),
+            (int)(quantum/100.0 * (workload[current_pid] * MIN_WORKLOAD))+1);
         if(
             (workit[current_pid] >0 
-            && workit[current_pid] % (int)(quantum*((workload[current_pid] * MIN_WORKLOAD)+1)/100.0) == 0 
-            && workit[current_pid]%MIN_WORKLOAD==0 
+            && workit[current_pid] % (int)(quantum/100.0 * (workload[current_pid] * MIN_WORKLOAD)) == 0 
+            && workit[current_pid] % MIN_WORKLOAD==0 
             && expropriative_mode==MODE_NO_EXPROPIATIVO) 
             || interrupted){
-             printf("PID %d yielding\n",current_pid);
+            update_row_status(current_pid,1.0 * workit[current_pid]/(workload[current_pid] * MIN_WORKLOAD),thread_acc[current_pid],0,0); 
+            printf("PID %d yielding\n",current_pid);
             int exception = SUSPENDED;
             if(interrupted) {
                 printf("PID %d yielded because of interrupt\n",current_pid);
@@ -141,10 +161,10 @@ void run_thread() {
         }
         }
     }
-    // printf("Thread %d done \n",pid);
+    printf("Thread %d done \n",current_pid);
     // printf("Final value of thread %d: %Lf\n",pid,thread_acc[pid]);
     // r = sigsetjmp(bufs[pid],1);
-
+    update_row_status(current_pid,1,thread_acc[current_pid],0,1); 
     siglongjmp(sched,DONE);
 }
 
@@ -181,7 +201,7 @@ void call_thread(int pid) {
 }
 
 
-void run_non_expropriative(){
+void * run_non_expropriative(){
     int r;
     int latest = choose_winner();
     while(!threads_done()){

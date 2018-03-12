@@ -2,7 +2,7 @@ CC = gcc
 GTKFLAGS = `pkg-config  --libs --cflags gtk+-2.0`
 LDFLAGS = -lm
 SRCS = gtk_ui.c hashmap.c test_main.c
-MAIN = test_main_out
+MAIN = project
 
 all:	$(MAIN)
 	@echo Compilation done. Set args in properties directory and run: ./$(MAIN)
@@ -16,4 +16,4 @@ clean:
 
 expropiative:
 	@echo Compiling expropiative
-	$(CC) -o expropiative expropiative.c arctan_func.c -lm
+	$(CC) -o project.o test_main.c arctan_func.c expropiative.c schedule.c  -lm

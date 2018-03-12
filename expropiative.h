@@ -1,3 +1,6 @@
+#ifndef EXPROPIATIVE_H
+#define EXPROPIATIVE_H
+
 #include "loader.h"
 #include <stdio.h>
 #include <setjmp.h>
@@ -8,8 +11,7 @@
 #include "expropiative_scheduler.h"
 #include "schedule.c"
 
-#ifndef EXPROPIATIVE_H
-#define EXPROPIATIVE_H
+
 
 
 // Registar buffers de los threads
