@@ -16,12 +16,14 @@
 static struct ExpropiativeScheduler scheduler;
 struct Property *global_property;
 
+
 //quantum
 void do_expropiative(struct ExpropiativeScheduler *scheduler){
     int b = checkIfThreadRunning();
     printf("do_expropiative: %d\n",b);
     if(b){
-        longjmp(sched,TIMEOUT);    
+        // longjmp(sched,TIMEOUT);
+        interrupted=1;    
     }
 	// sacar thread
     // check if current thread DONE y remove_ticket

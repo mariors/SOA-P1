@@ -25,6 +25,7 @@ int* thread_status;
 int* workload;
 int* workit;
 volatile int current_pid;
+volatile int interrupted = 0;
 
 //Series calculation.
 long double* temp_acc;
@@ -121,10 +122,21 @@ void run_thread() {
         // printf("(Mode %d)PID %d it %d/%d: %Lf\n",expropriative_mode,current_pid,workit[current_pid],(workload[current_pid] * MIN_WORKLOAD)+1,thread_acc[current_pid]);
         // printf("Calculated one step %d\n",current_pid);
         // temp_acc[current_pid] = 0.0;
-        if(workit[current_pid] >0 && workit[current_pid] % (int)(quantum*((workload[current_pid] * MIN_WORKLOAD)+1)/100.0) == 0 && workit[current_pid]%MIN_WORKLOAD==0 && expropriative_mode==MODE_NO_EXPROPIATIVO){
+        if(
+            (workit[current_pid] >0 
+            && workit[current_pid] % (int)(quantum*((workload[current_pid] * MIN_WORKLOAD)+1)/100.0) == 0 
+            && workit[current_pid]%MIN_WORKLOAD==0 
+            && expropriative_mode==MODE_NO_EXPROPIATIVO) 
+            || interrupted){
              printf("PID %d yielding\n",current_pid);
+            int exception = SUSPENDED;
+            if(interrupted) {
+                printf("PID %d yielded because of interrupt\n",current_pid);
+                exception = TIMEOUT;
+                interrupted=0;
+            }
             r = sigsetjmp(bufs[current_pid],1);
-            if(r==0) siglongjmp(sched,SUSPENDED);
+            if(r==0) siglongjmp(sched,exception);
             else {printf("PID %d came back from scheduler\n",current_pid);
         }
         }
@@ -223,15 +235,17 @@ void do_timeout(){
      siglongjmp(sched,TIMEOUT);
 }*/
 
-int main(int argc, char** argv){
-    //Initialize running environment.
-    struct Property property;
-    initProperty(&property);
-    initialize_global(&property);
+// int main(int argc, char** argv){
+//     //Initialize running environment.
+//     printf("Running no-expropriative\n");
+//     struct Property property;
+//     initProperty(&property);
+//     initialize_global(&property);
 
-    run_non_expropriative();
-    return 0;
-}
+//     run_non_expropriative();
+//     return 0;
+// }
+
 
 
 
