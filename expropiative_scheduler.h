@@ -6,14 +6,14 @@
 #ifndef EXPROPIATIVE_SCHEDULER_H
 #define EXPROPIATIVE_SCHEDULER_H
 
-struct ExpropiativoScheduler{
+struct ExpropiativeScheduler{
 	int *tickets;
 	int *ticket_sum;
 	int size;
 	int num_tickets;
 };
 
-void calculate_ticket_sum(struct ExpropiativoScheduler *scheduler){
+void calculate_ticket_sum(struct ExpropiativeScheduler *scheduler){
     scheduler->ticket_sum[0] = scheduler->tickets[0];
     for(int i =1; i < scheduler->size; i++){
         scheduler->ticket_sum[i] = scheduler->ticket_sum[i-1]+scheduler->tickets[i];
@@ -21,8 +21,8 @@ void calculate_ticket_sum(struct ExpropiativoScheduler *scheduler){
     scheduler->num_tickets = scheduler->ticket_sum[scheduler->size-1];
 }
 
-void initExpropiativoScheduler(struct ExpropiativoScheduler *scheduler, struct Property *property){
-	printf("initExpropiativoScheduler\n");
+void initExpropiativeScheduler(struct ExpropiativeScheduler *scheduler, struct Property *property){
+	printf("initExpropiativeScheduler\n");
 	printf("size: %d\n",property->size);
 	scheduler->tickets = property->tickets;
 	scheduler->size = property->size;
@@ -36,12 +36,12 @@ int select_ticket(int max_val){
     return (rand()/ (RAND_MAX / max_val + 1));
 }
 
-void remove_tickets(struct ExpropiativoScheduler *scheduler,int pid){
+void remove_tickets(struct ExpropiativeScheduler *scheduler,int pid){
     scheduler->tickets[pid] = 0;
     calculate_ticket_sum(scheduler);
 }
 
-int choose_winner(struct ExpropiativoScheduler *scheduler){
+int choose_winner(struct ExpropiativeScheduler *scheduler){
     int winner = select_ticket(scheduler->num_tickets);
     int increment = sqrt(scheduler->size);
     for(int i=0;i<scheduler->size;i++){
