@@ -25,7 +25,8 @@ int* workload;
 //Series calculation.
 long double* temp_acc;
 long double* thread_acc;
-jmp_buf** bufs;
+// jmp_buf** bufs;
+jmp_buf bufs[5];
 jmp_buf sched;
 
 int select_ticket(int);
@@ -44,16 +45,17 @@ void initialize_global(struct Property* property) {
     thread_status = malloc(sizeof(int)*num_threads);
     temp_acc = malloc(sizeof(long double)*num_threads);
     thread_acc = malloc(sizeof(long double)*num_threads);
-    bufs = malloc(sizeof(jmp_buf));
+    // bufs = malloc(sizeof(jmp_buf)*num_threads);
     workload = property->workload;
     for (int i = 0; i < num_threads; ++i) {
-        jmp_buf aux;
+        // jmp_buf aux;
         cant[i]=0;
         ticket_sum[i]=0;
         thread_status[i]=NOT_STARTED;
         temp_acc[i] = 0.0;
         thread_acc[i] = 0.0;
-        bufs[i] = &aux;
+        // bufs[i] = malloc(sizeof(jmp_buf));
+        // bufs[i] = &aux;
     }
     calculate_ticket_sum();
 }
@@ -87,27 +89,22 @@ int choose_winner(){
 
 long double calculate_series_element(int iter) {return 1.0;}
 
-//Calculate the partial result for one work unit.
-long double run_work_unit(int pid,int start) {
-    int r;
-    for (int i = start; i < start + MIN_WORKLOAD; ++i) {
-        r = setjmp(*bufs[pid]);//Might be preempted at any moment.
-        temp_acc[pid] += calculate_series_element(i);
-    }
-    return temp_acc[pid];
-}
-//Workloads:[]
-//[1 1 1 1 2 2 2 3 3]
-
-void run_thread(int pid) {
+void run_thread(volatile int pid) {
+    printf("Running %d quantum %d\n",pid,quantum);
     int r;
     int total_iterations = workload[pid] * MIN_WORKLOAD;
     int yield_rate = (quantum*total_iterations/100.0);
-    for (int workit = 0; workit < total_iterations; workit+=MIN_WORKLOAD) {
-        r = setjmp(*bufs[pid]);
-        thread_acc[pid] += run_work_unit(pid,workit);
+    printf("Yield rate: %d on quantum %d\n",yield_rate,quantum);
+    printf("Running %d\n",pid);
+    for (int workit = 0; workit < total_iterations; ++workit) {
+        printf("inside loop %d\n",pid);
+        r = setjmp(bufs[pid]);
+        if(r!=0) printf("came back %d %d\n",pid,r);
+        thread_acc[pid] += calculate_series_element(workit);
+        printf("Calculated one step %d\n",pid);
         temp_acc[pid] = 0.0;
-        if(workit % yield_rate == 0){
+        if(workit >0 && workit % yield_rate == 0 && workit%MIN_WORKLOAD==0){
+            printf("enough steps to yield\n");
             longjmp(sched,SUSPENDED);   
         }
     }
@@ -133,7 +130,8 @@ void call_thread(int pid) {
         if(thread_status[pid] != DONE) {
             printf("Resuming: %d\n",pid);
             thread_status[pid] = RUNNING;
-            longjmp(*bufs[pid],RUNNING);
+            printf("Calling lonjmp resume\n");
+            longjmp(bufs[pid],RUNNING);
         } else {
             printf("Thread %d already done \n",pid);
         }
