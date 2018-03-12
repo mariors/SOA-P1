@@ -1,3 +1,15 @@
+CC = gcc
+GTKFLAGS = `pkg-config  --libs --cflags gtk+-2.0`
+LDFLAGS = -lm
+SRCS = gtk_ui.c hashmap.c test_main.c
+MAIN = test_main_out
 
-do: chirrion.c
-	gcc -o chirrion chirrion.c 
+all:	$(MAIN)
+	@echo Compilation done. Set args in properties directory and run: ./$(MAIN)
+
+$(MAIN): $(SRCS)
+	@echo Compiling $(MAIN)...
+	$(CC) $(SRCS) $(GTKFLAGS) -o $@ $(LDFLAGS)
+
+clean:
+	$(RM) *~ *.o $(MAIN)

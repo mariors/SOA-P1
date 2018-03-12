@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <math.h>
 
+//Se usa por la interfaz, no borrar
 char **ids;
 
 
@@ -65,9 +66,7 @@ void * inc_x (void *x_void_ptr) {
 }
 
 
-void expropiativo(){
-
-	printf("EXP");
+void expropiativo(struct Property *property){
 
 	pthread_t inc_x_thread;
 	int t = 1;
@@ -75,9 +74,7 @@ void expropiativo(){
 
 }
 
-void no_expropiativo(){
-
-	printf("NO_EXP");
+void no_expropiativo(struct Property *property){
 
 	pthread_t inc_x_thread;
 	int t = 1;
@@ -90,9 +87,6 @@ int main(int argc, char * argv[]){
 
 	struct Property property;
 	initProperty(&property);
-
-//	int nThreads = 5;
-//	int mode = 0;
 
 
 	ids = malloc (sizeof (char *) * property.size);
@@ -121,9 +115,9 @@ int main(int argc, char * argv[]){
 	show_ui();
 
 	if(property.mode == 1){
-		expropiativo();
+		expropiativo(&property);
 	}else{
-		no_expropiativo();
+		no_expropiativo(&property);
 	}
 
 
