@@ -9,6 +9,11 @@
 #define MODE_NO_EXPROPIATIVO 0
 #define MODE_EXPROPIATIVO 1
 
+#define FILE_TICKETS "properties/tickets.txt"
+#define FILE_MODE "properties/mode.txt"
+#define FILE_QUANTUM "properties/quantum.txt"
+#define FILE_WORKLOAD "properties/workload.txt"
+
 
 struct Property {
 	int *tickets;
@@ -27,7 +32,7 @@ int countLines(char *file){
     ssize_t read;
     int ret = 0;
 	if (f == NULL){
-		printf("Error Abriendo Archivo");
+		printf("Error Abriendo Archivo %s",file);
         exit(EXIT_FAILURE); 
 	}
 	while ((read = getline(&line, &len, f)) != -1) {ret++;}
@@ -46,7 +51,7 @@ void loadTickets(struct Property* t,char *file){
     int ret = 0;
     t->max_lottery = 0;
 	if (f == NULL){
-		printf("Error Abriendo Archivo");
+		printf("Error Abriendo Archivo %s",file);
         exit(EXIT_FAILURE); 
 	}
 	while ((read = getline(&line, &len, f)) != -1) {
@@ -68,7 +73,7 @@ void loadWorkload(struct Property* t,char *file){
     ssize_t read;
     int ret = 0;
 	if (f == NULL){
-		printf("Error Abriendo Archivo");
+		printf("Error Abriendo Archivo %s",file);
         exit(EXIT_FAILURE); 
 	}
 	while ((read = getline(&line, &len, f)) != -1) {
@@ -90,7 +95,7 @@ void loadQuantum(struct Property* t,char *file){
     ssize_t read;
     int ret = 0;
 	if (f == NULL){
-		printf("Error Abriendo Archivo");
+		printf("Error Abriendo Archivo %s",file);
         exit(EXIT_FAILURE); 
 	}
 	while ((read = getline(&line, &len, f)) != -1) {
@@ -109,7 +114,7 @@ void loadMode(struct Property* t,char *file){
     ssize_t read;
     int ret = 0;
 	if (f == NULL){
-		printf("Error Abriendo Archivo");
+		printf("Error Abriendo Archivo %s",file);
         exit(EXIT_FAILURE); 
 	}
 	while ((read = getline(&line, &len, f)) != -1) {
@@ -121,16 +126,16 @@ void loadMode(struct Property* t,char *file){
 }
 
 void initProperty(struct Property *property){
-	property->size = countLines("tickets.txt");
+	property->size = countLines(FILE_TICKETS);
 
 	property->tickets = malloc(property->size*sizeof(int));
 	property->workload = malloc(property->size*sizeof(int));
 	property->workload_calc = malloc(property->size*sizeof(int));
 
-	loadTickets(property, "tickets.txt");
-	loadWorkload(property,"workload.txt");
-	loadQuantum(property,"quantum.txt");
-	loadMode(property,"mode.txt");
+	loadTickets(property, FILE_TICKETS);
+	loadWorkload(property,FILE_WORKLOAD);
+	loadQuantum(property,FILE_QUANTUM);
+	loadMode(property,FILE_MODE);
 
 	printf("Lines: %d\n",property->size);
 
