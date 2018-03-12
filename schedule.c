@@ -104,6 +104,7 @@ long double calculate_series_element(int iter) {return 1.0;}
 void run_thread(volatile int pid) {
     printf("Running %d quantum %d\n",pid,quantum);
     int r;
+    // int r = setjmp(bufs[pid]);
     int total_iterations = workload[pid] * MIN_WORKLOAD;
     int yield_rate = (quantum*total_iterations/100.0);
     // printf("Yield rate: %d on quantum %d\n",yield_rate,quantum);
@@ -112,11 +113,11 @@ void run_thread(volatile int pid) {
         // printf("Starting iteration %d\n",pid);
         // printf("inside loop %d\n",pid);
         thread_acc[pid] += arctan_aproximation(1,workit);
-        //printf("PID %d it %d: %Lf\n",pid,workit,thread_acc[pid]);
+        // printf("(Mode %d)PID %d it %d: %Lf\n",expropriative_mode,pid,workit,thread_acc[pid]);
         // printf("Calculated one step %d\n",pid);
         // temp_acc[pid] = 0.0;
-        if(workit >0 && workit % yield_rate == 0 && workit%MIN_WORKLOAD==0 && !expropriative_mode){
-            // printf("enough steps to yield\n");
+        if(workit >0 && workit % yield_rate == 0 && workit%MIN_WORKLOAD==0 && expropriative_mode==MODE_NO_EXPROPIATIVO){
+            printf("enough steps to yield, setting jmp %d\n",pid);
             r = setjmp(bufs[pid]);
             if(r==0) longjmp(sched,SUSPENDED); 
             else continue;
@@ -125,6 +126,7 @@ void run_thread(volatile int pid) {
     // printf("Thread %d done \n",pid);
     // printf("Final value of thread %d: %Lf\n",pid,thread_acc[pid]);
     // r = setjmp(bufs[pid]);
+
     longjmp(sched,DONE);
 }
 
@@ -147,7 +149,7 @@ void call_thread(int pid) {
         if(thread_status[pid] != DONE) {
             printf("Resuming: %d\n",pid);
             thread_status[pid] = RUNNING;
-            printf("Calling lonjmp resume\n");
+            printf("Calling lonjmp resume %d\n",pid);
             longjmp(bufs[pid],RUNNING);
         } else {
             printf("Thread %d already done \n",pid);
@@ -158,12 +160,16 @@ void call_thread(int pid) {
 
 void run_non_expropriative(){
     int r;
+    int latest = choose_winner();
     while(!threads_done()){
         int to_run = choose_winner();
+        if(to_run == latest)continue;
         r = setjmp(sched);
         if(r==0) call_thread(to_run);
         else {//Returning from thread.
+            printf("Returning from thread %d with status %d\n",to_run,r);
             thread_status[to_run] = r;
+            latest = to_run;
             if(thread_status[to_run] == DONE){
                remove_tickets(to_run); 
             }
@@ -181,10 +187,11 @@ void run_expropriative(){
     while(!threads_done()){
         int to_run = choose_winner();
         r = setjmp(sched);
-        printf("Came back from timeout");
         if(r==0) call_thread(to_run);
         else {//Returning from thread.
+            printf("Exception code: %d\n",r);
             if(r==TIMEOUT){ //triggered by timeout func.
+                printf("Came back from timeout %d\n",r);
                 thread_status[to_run] = SUSPENDED;    
             } else { //triggered by thread notification
                 thread_status[to_run] = r;
@@ -194,13 +201,16 @@ void run_expropriative(){
             }
         }
     }
+     for (int i = 0; i < num_threads; ++i){
+        printf("PID: %d Result: %Lf\n",i,thread_acc[i]);
+    }
 }
 
 /*
 void do_timeout(){
      longjmp(sched,TIMEOUT);
 }*/
-/*
+
 int main(int argc, char** argv){
     //Initialize running environment.
     struct Property property;
@@ -209,7 +219,7 @@ int main(int argc, char** argv){
 
     run_non_expropriative();
     return 0;
-}*/
+}
 
 
 
