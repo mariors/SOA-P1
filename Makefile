@@ -13,3 +13,7 @@ $(MAIN): $(SRCS)
 
 clean:
 	$(RM) *~ *.o $(MAIN)
+
+expropiative:
+	@echo Compiling expropiative
+	$(CC) -o expropiative expropiative.c arctan_func.c -lm

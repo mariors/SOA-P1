@@ -63,6 +63,15 @@ void initialize_global(struct Property* property) {
     calculate_ticket_sum();
 }
 
+int checkIfThreadRunning(){
+    int b = 0;
+    for(int i = 0; i < num_threads && !b; i++){
+        if(thread_status[i]!=NOT_STARTED)
+            b = 1;
+    }
+    return b;
+}
+
 
 int select_ticket(int max_val){
     return (rand()/ (RAND_MAX / max_val + 1));
@@ -160,8 +169,7 @@ void run_non_expropriative(){
             }
         }
     }
-    for (int i = 0; i < num_threads; ++i)
-    {
+    for (int i = 0; i < num_threads; ++i){
         printf("PID: %d Result: %Lf\n",i,thread_acc[i]);
     }
 
@@ -173,6 +181,7 @@ void run_expropriative(){
     while(!threads_done()){
         int to_run = choose_winner();
         r = setjmp(sched);
+        printf("Came back from timeout");
         if(r==0) call_thread(to_run);
         else {//Returning from thread.
             if(r==TIMEOUT){ //triggered by timeout func.
@@ -187,11 +196,11 @@ void run_expropriative(){
     }
 }
 
-
-// void do_timeout(){
-//     longjmp(sched,TIMEOUT);
-// }
-
+/*
+void do_timeout(){
+     longjmp(sched,TIMEOUT);
+}*/
+/*
 int main(int argc, char** argv){
     //Initialize running environment.
     struct Property property;
@@ -200,7 +209,7 @@ int main(int argc, char** argv){
 
     run_non_expropriative();
     return 0;
-}
+}*/
 
 
 

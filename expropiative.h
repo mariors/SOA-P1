@@ -6,6 +6,7 @@
 #include <string.h>
 #include <sys/time.h>
 #include "expropiative_scheduler.h"
+#include "schedule.c"
 
 #ifndef EXPROPIATIVE_H
 #define EXPROPIATIVE_H
@@ -17,7 +18,11 @@ struct Property *global_property;
 
 //quantum
 void do_expropiative(struct ExpropiativeScheduler *scheduler){
-    //longjmp(sched,TIMEOUT);
+    int b = checkIfThreadRunning();
+    printf("do_expropiative: %d\n",b);
+    if(b){
+        longjmp(sched,TIMEOUT);    
+    }
 	// sacar thread
     // check if current thread DONE y remove_ticket
     // change state to SUSPENDED
@@ -25,6 +30,7 @@ void do_expropiative(struct ExpropiativeScheduler *scheduler){
 	//send to Run
 	//printf("do_expropiative thread: %d\n",newThread);
 }
+
 
 
 void timer_handler (int signum){
@@ -55,11 +61,12 @@ void keep_working(){
     while (1);
 }
 
-void run_expropiative(struct Property *property){
+/*
+void run_expropriative(struct Property *property){
 	global_property = property;
-    initExpropiativeScheduler(&scheduler,global_property);
+    //initExpropiativeScheduler(&scheduler,global_property);
     create_signal_timer(property->quantum);
     keep_working();
-}
+}*/
 
 #endif

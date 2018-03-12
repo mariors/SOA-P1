@@ -1,4 +1,5 @@
 #include "loader.h"
+//#include "schedule.c"
 #include "expropiative.h"
 
 
@@ -7,7 +8,9 @@ int main()
     struct Property property;
     initProperty(&property);
 
-    run_expropiative(&property);
- 
+	initialize_global(&property);
+	create_signal_timer(property.quantum);
+	run_expropriative(&property);
+ 	keep_working();
     return 0;
 }
