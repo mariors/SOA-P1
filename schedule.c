@@ -39,7 +39,7 @@ volatile int interrupted = 0;
 long double* temp_acc;
 long double* thread_acc;
 // jmp_buf** bufs;
-sigjmp_buf bufs[5];
+sigjmp_buf bufs[MAX_THREADS];
 sigjmp_buf sched;
 
 int select_ticket(int);
@@ -62,7 +62,7 @@ void initialize_global(struct Property* property) {
     workit = malloc(sizeof(int)*num_threads);
     // bufs = malloc(sizeof(jmp_buf)*num_threads);
     workload = property->workload;
-    for (int i = 0; i < num_threads; ++i) {
+    for (int i = 0; i < num_threads; i++) {
         jmp_buf aux;
         cant[i]=0;
         ticket_sum[i]=0;
@@ -123,7 +123,7 @@ void run_thread() {
     // int r = sigsetjmp(bufs[current_pid],1);
     // printf("Yield rate: %d on quantum %d\n",yield_rate,quantum);
     printf("Running %d\n",current_pid);
-    for (; workit[current_pid] < (workload[current_pid] * MIN_WORKLOAD); ++workit[current_pid]) {
+    for (; workit[current_pid] < (workload[current_pid] * MIN_WORKLOAD); workit[current_pid]++) {
         // printf("Starting iteration %d\n",current_pid);
         printf("inside loop %d\n",current_pid);
 
@@ -169,7 +169,7 @@ void run_thread() {
 }
 
 int threads_done() {
-    for (int i = 0; i < num_threads; ++i){
+    for (int i = 0; i < num_threads; i++){
         if(thread_status[i]!=DONE) {
             printf("Thread %d not done\n",i);
             return 0;
@@ -219,7 +219,7 @@ void * run_non_expropriative(){
             }
         }
     }
-    for (int i = 0; i < num_threads; ++i){
+    for (int i = 0; i < num_threads; i++){
         printf("PID: %d Result: %Lf\n",i,thread_acc[i]);
     }
 
@@ -245,7 +245,7 @@ void run_expropriative(){
             }
         }
     }
-     for (int i = 0; i < num_threads; ++i){
+     for (int i = 0; i < num_threads; i++){
         printf("PID: %d Result: %Lf\n",i,thread_acc[i]);
     }
 }
@@ -274,7 +274,7 @@ long double calculate_arctan(struct Property* property) {
         //Schedule choose next player.
     }
     long double res = 0.0;
-    for (int i = 0; i < num_threads; ++i){
+    for (int i = 0; i < num_threads; i++){
         res+=thread_acc[i];
     }
     return res;
